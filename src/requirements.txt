@@ -1,0 +1,2 @@
+# V1 uses only the Python standard library.
+# System packages are installed with apt: alsa-utils, espeak-ng, git, cmake, build-essential.
