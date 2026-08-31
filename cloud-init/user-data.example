@@ -1,0 +1,12 @@
+#cloud-config
+hostname: arty-ai-reminder
+manage_etc_hosts: true
+timezone: Asia/Bangkok
+package_update: true
+packages:
+  - git
+  - ca-certificates
+runcmd:
+  - [ bash, -lc, "git clone https://github.com/arty2525/Arty-AI-Reminder.git /opt/Arty-AI-Reminder" ]
+  - [ bash, -lc, "cd /opt/Arty-AI-Reminder && ARTY_USER=ubuntu ./install.sh" ]
+final_message: "Arty AI Reminder bootstrap finished"
