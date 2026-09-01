@@ -1,0 +1,23 @@
+name: V2 syntax checks
+on:
+  push:
+  pull_request:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile all Python source
+        run: |
+          python -m py_compile src/*.py scripts/*.py tests/*.py
+      - name: Validate shell scripts
+        run: |
+          bash -n install.sh
+          bash -n install-v2.sh
+          bash -n update.sh
+          bash -n uninstall.sh
+          bash -n scripts/enable_rtc_ds3231.sh
