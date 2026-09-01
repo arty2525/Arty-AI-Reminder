@@ -14,6 +14,8 @@ sudo bash install-v2.sh
 sudo reboot
 ```
 
+`install-v2.sh` จะตรวจรุ่น Raspberry Pi อัตโนมัติ หากเป็น **Raspberry Pi 5** จะอัปเกรด `gpiozero` เป็นรุ่นที่แก้ปัญหา `lgpio` บน Pi 5 ก่อนเปิด service GPIO
+
 หลัง reboot:
 
 ```bash
