@@ -21,3 +21,4 @@ jobs:
           bash -n update.sh
           bash -n uninstall.sh
           bash -n scripts/enable_rtc_ds3231.sh
+          bash -n scripts/pi5_gpio_fix.sh
