@@ -6,32 +6,67 @@ Prototype ผู้ช่วย AI แจ้งเตือนด้วยเส
 
 > ตั้งเตือน วันที่ 1 กันยายน เวลา 08.00 น. ร่วมงานสถาปนา
 
-ระบบจะถอดเสียงภาษาไทยด้วย `whisper.cpp`, แปลงวันที่/เวลา, บันทึกลง SQLite และแจ้งเตือนล่วงหน้า **30 นาที** ผ่านลำโพง
+ระบบใช้ `whisper.cpp` ถอดเสียงภาษาไทย, แปลงวันที่/เวลา, บันทึกลง SQLite และแจ้งเตือนล่วงหน้า **30 นาที**
 
-## เป้าหมายฮาร์ดแวร์
+## V2 — รุ่นแนะนำสำหรับ Prototype จริง
 
-- Raspberry Pi 4 หรือ Raspberry Pi 5 (แนะนำ RAM 4 GB ขึ้นไป)
-- Ubuntu 24.04 LTS Server ARM64
-- microSD 32 GB ขึ้นไป (แนะนำ 64 GB)
-- USB Microphone
-- USB Speaker หรืออุปกรณ์เสียงที่ ALSA มองเห็น
-- Internet สำหรับการติดตั้งครั้งแรก
+V2 เพิ่ม:
 
-## ติดตั้งจาก GitHub
+- Push Button กดเพื่อเริ่มพูด
+- LED เขียว = พร้อม
+- LED เหลือง = กำลังฟัง/ประมวลผล
+- LED แดง + Buzzer = แจ้งเตือน
+- DS3231 RTC แบบเลือกติดตั้ง เพื่อรักษาเวลาเมื่อไม่มี Internet
+- ตรวจ Raspberry Pi 5 และแก้ compatibility ของ `gpiozero/lgpio` อัตโนมัติ
+
+ติดตั้ง:
+
+```bash
+sudo apt update
+sudo apt install -y git
+cd ~
+git clone https://github.com/arty2525/Arty-AI-Reminder.git
+cd Arty-AI-Reminder
+sudo bash install-v2.sh
+sudo reboot
+```
+
+หลัง reboot:
+
+```bash
+arty-audio
+arty-gpio-test
+arty-v2-status
+```
+
+ดูรายละเอียด V2 ที่ `README_V2.md` และการต่อวงจรที่ `docs/HARDWARE_V2.md`
+
+## Pin Map V2
+
+| อุปกรณ์ | GPIO |
+|---|---:|
+| Push Button | GPIO17 |
+| LED เขียว | GPIO27 |
+| LED เหลือง | GPIO22 |
+| LED แดง | GPIO23 |
+| Active Buzzer signal | GPIO24 |
+| DS3231 SDA | GPIO2 |
+| DS3231 SCL | GPIO3 |
+
+> GPIO ของ Raspberry Pi เป็นลอจิก 3.3V ห้ามป้อน 5V เข้าขา GPIO โดยตรง และ LED ต้องมีตัวต้านทาน 220–330Ω
+
+## V1 — Software Prototype
+
+หากยังไม่ต่อ GPIO สามารถติดตั้งเฉพาะ V1 ได้:
 
 ```bash
 git clone https://github.com/arty2525/Arty-AI-Reminder.git
 cd Arty-AI-Reminder
 sudo ./install.sh
-```
-
-หลังติดตั้ง แนะนำ reboot 1 ครั้ง:
-
-```bash
 sudo reboot
 ```
 
-## คำสั่งหลัก
+คำสั่ง V1:
 
 ```bash
 arty-audio       # ตรวจไมโครโฟน/ลำโพง
@@ -49,7 +84,7 @@ arty-status      # ดูสถานะ reminder daemon
 ตั้งเตือน วันที่ 1 กันยายน เวลา 08.00 น. ร่วมงานสถาปนา
 ```
 
-ผลที่ควรได้:
+ผล:
 
 ```text
 กิจกรรม       : ร่วมงานสถาปนา
@@ -57,66 +92,74 @@ arty-status      # ดูสถานะ reminder daemon
 เวลาแจ้งเตือน  : 01/09/2026 07:30
 ```
 
-## โครงสร้าง
+## โครงสร้างหลัก
 
 ```text
 Arty-AI-Reminder/
 ├── README.md
+├── README_V2.md
 ├── install.sh
+├── install-v2.sh
 ├── update.sh
 ├── uninstall.sh
 ├── src/
 │   ├── voice_assistant.py
+│   ├── voice_once.py
 │   ├── recorder.py
 │   ├── speech_to_text.py
 │   ├── thai_parser.py
 │   ├── database.py
-│   ├── reminder_daemon.py
+│   ├── hardware.py
+│   ├── button_daemon_v2.py
+│   ├── reminder_daemon_v2.py
 │   ├── tts.py
 │   └── config.py
 ├── cloud-init/
 ├── docs/
+│   ├── HARDWARE_V2.md
+│   └── RTC_DS3231.md
 ├── scripts/
+│   ├── gpio_test.py
+│   ├── pi5_gpio_fix.sh
+│   └── enable_rtc_ds3231.sh
 ├── tests/
 └── .github/workflows/
 ```
 
-## อัปเดตโปรแกรมบน Raspberry Pi
+## DS3231 RTC
+
+หลังต่อ DS3231 แล้ว:
+
+```bash
+cd ~/Arty-AI-Reminder
+sudo bash scripts/enable_rtc_ds3231.sh
+sudo reboot
+sudo hwclock -r
+```
+
+Ubuntu บน Raspberry Pi ใช้ boot configuration ที่ `/boot/firmware/config.txt`; สคริปต์จะเพิ่ม `dtparam=i2c_arm=on` และ `dtoverlay=i2c-rtc,ds3231` เมื่อยังไม่มี
+
+## อัปเกรด V1 → V2
 
 ```bash
 cd ~/Arty-AI-Reminder
 git pull
-sudo ./update.sh
+sudo bash install-v2.sh
+sudo reboot
 ```
 
-หากมีการเปลี่ยน dependency หรือ `whisper.cpp` ให้ใช้
-
-```bash
-sudo ./install.sh
-```
-
-อีกครั้งได้ โดย installer ออกแบบให้รันซ้ำได้
-
-## ทดสอบ Source Code ก่อนติดตั้ง
+## ทดสอบ Source Code
 
 ```bash
 python3 -m unittest discover -s tests -v
 python3 scripts/self_test.py
 ```
 
+GitHub Actions ตรวจทั้ง Python tests และ syntax ของ Python/Shell scripts ทุกครั้งที่ push
+
 ## SD Card / Classroom
 
 ดู `docs/INSTALL_SD.md` สำหรับการเตรียม Ubuntu ลง microSD และ `cloud-init/` สำหรับตัวอย่างการติดตั้งอัตโนมัติในบูตแรก
-
-## หมายเหตุด้านเสียง
-
-อุปกรณ์ USB microphone/speaker แต่ละรุ่นอาจได้หมายเลข ALSA ต่างกัน ให้เริ่มตรวจจาก
-
-```bash
-arty-audio
-```
-
-หาก `arecord` หรือ `aplay` ไม่เลือกอุปกรณ์ที่ต้องการเป็นค่าเริ่มต้น อาจต้องกำหนด ALSA default device เพิ่มตามฮาร์ดแวร์ที่ใช้ในห้องเรียน
 
 ## License
 
