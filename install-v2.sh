@@ -17,17 +17,20 @@ fi
 
 printf '\n=== Arty AI Reminder V2 Hardware Installer ===\n'
 
-# Install/refresh the stable V1 core first. It also copies every src/*.py,
-# including V2 modules, into /opt/arty-ai-reminder.
-echo "[1/7] ติดตั้ง Core AI Reminder"
+# Install/refresh stable core first. install.sh copies all src/*.py, including V2.
+echo "[1/8] ติดตั้ง Core AI Reminder"
 bash "$REPO_DIR/install.sh"
 
-echo "[2/7] ติดตั้ง GPIO/I2C packages"
+echo "[2/8] ติดตั้ง GPIO/I2C packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y python3-gpiozero python3-lgpio i2c-tools
 
-echo "[3/7] ตั้งสิทธิ์ GPIO"
+# gpiozero 2.0.1.post3 fixes lgpio operation on current Raspberry Pi 5 kernels.
+echo "[3/8] ตรวจ Raspberry Pi 5 GPIO compatibility"
+bash "$REPO_DIR/scripts/pi5_gpio_fix.sh"
+
+echo "[4/8] ตั้งสิทธิ์ GPIO"
 getent group gpio >/dev/null || groupadd gpio
 usermod -aG gpio "$TARGET_USER" || true
 cat > /etc/udev/rules.d/60-arty-gpio.rules <<'EOF'
@@ -41,11 +44,10 @@ for chip in /dev/gpiochip*; do
   chmod 0660 "$chip" || true
 done
 
-# Keep a copy of the classroom GPIO self-test beside the installed app.
 install -m 0644 "$REPO_DIR/scripts/gpio_test.py" "$APP_DIR/gpio_test.py"
 chown "$TARGET_USER:$TARGET_GROUP" "$APP_DIR/gpio_test.py"
 
-echo "[4/7] ติดตั้งคำสั่งทดสอบฮาร์ดแวร์"
+echo "[5/8] ติดตั้งคำสั่งทดสอบฮาร์ดแวร์"
 cat > /usr/local/bin/arty-gpio-test <<'SH'
 #!/usr/bin/env bash
 cd /opt/arty-ai-reminder
@@ -62,7 +64,7 @@ systemctl --no-pager --full status arty-ai-button.service || true
 SH
 chmod 0755 /usr/local/bin/arty-gpio-test /usr/local/bin/arty-v2-status
 
-echo "[5/7] เปิด Reminder daemon V2 (LED แดง + Buzzer)"
+echo "[6/8] เปิด Reminder daemon V2 (LED แดง + Buzzer)"
 cat > /etc/systemd/system/arty-ai-reminder.service <<EOF
 [Unit]
 Description=Arty AI Reminder V2 Daemon
@@ -83,7 +85,7 @@ RestartSec=3
 WantedBy=multi-user.target
 EOF
 
-echo "[6/7] เปิด Push-button daemon V2"
+echo "[7/8] เปิด Push-button daemon V2"
 cat > /etc/systemd/system/arty-ai-button.service <<EOF
 [Unit]
 Description=Arty AI Reminder V2 Push Button
@@ -109,7 +111,7 @@ systemctl enable arty-ai-reminder.service arty-ai-button.service
 systemctl restart arty-ai-reminder.service
 systemctl restart arty-ai-button.service
 
-echo "[7/7] ตรวจ Syntax และสถานะ"
+echo "[8/8] ตรวจ Syntax และสถานะ"
 python3 -m py_compile "$APP_DIR"/*.py
 systemctl --no-pager --full status arty-ai-reminder.service || true
 systemctl --no-pager --full status arty-ai-button.service || true
